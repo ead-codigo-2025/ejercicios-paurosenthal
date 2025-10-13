@@ -1,0 +1,165 @@
+/* --- Variables CSS --- */
+:root {
+    --primary-blue: #0A2240;
+    --text-dark: #333333;
+    --text-light: #666666;
+    --bg-light: #F8F8F8;
+    --white: #FFFFFF;
+    --hover-orange: #FF5722;
+}
+
+/* --- Estilos Generales y Tipografía --- */
+body {
+    font-family: 'Montserrat', sans-serif;
+    margin: 0;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    line-height: 1.6;
+}
+
+h1, h2, h3 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.main-content {
+    /* Centrar contenido con ancho máximo */
+    max-width: 1200px; 
+    margin: 0 auto;
+    padding: 40px 60px;
+}
+
+/* --- Botones Simples --- */
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.primary-btn {
+    background-color: var(--hover-orange);
+    color: var(--white);
+}
+
+.secondary-btn {
+    background-color: var(--white);
+    color: var(--primary-blue);
+    border: 1px solid var(--primary-blue);
+}
+
+/* --- SECCIÓN SUPERIOR: Intro y Tarjetas (USANDO FLEXBOX Y GRID SIMPLE) --- */
+.info-section {
+    display: flex; /* Flexbox para dividir en dos grandes columnas (Intro + Tarjetas) */
+    gap: 40px;
+    margin-bottom: 60px;
+}
+
+.intro-block {
+    /* Columna de texto */
+    width: 33%; 
+    min-width: 300px; 
+}
+
+.intro-block h1 {
+    font-size: 40px;
+    color: var(--primary-blue);
+}
+
+/* EL ARREGLO ESTÁ AQUÍ: USAMOS GRID BÁSICO PARA EL ORDEN 2x2 */
+.cards-container {
+    flex-grow: 1; 
+    
+    display: grid; /* ¡Usamos Grid para ordenar! */
+    grid-template-columns: 1fr 1fr; /* Exactamente dos columnas iguales */
+    gap: 20px; /* Espacio entre filas y columnas */
+    
+    /* Limitamos el ancho del área de tarjetas para replicar el espacio de la imagen */
+    max-width: 600px; 
+}
+
+.info-card {
+    /* Grid se encarga del tamaño. No necesitamos alturas fijas complejas */
+    min-height: 120px; /* Mínimo para que se vean grandes */
+    
+    background-color: var(--white);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    
+    /* Usamos Flexbox dentro de la tarjeta para centrar el contenido verticalmente */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; 
+}
+
+.card-icon {
+    font-size: 14px;
+    color: var(--primary-blue);
+    margin-bottom: 5px;
+    display: block;
+}
+
+.card-category {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 5px;
+    display: block;
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+
+/* --- SECCIÓN INFERIOR: Talleres Deportivos (Sin cambios) --- */
+.sports-section {
+    display: flex; 
+    background-color: var(--primary-blue);
+    color: var(--white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.sports-content {
+    width: 40%; 
+    padding: 50px 60px;
+}
+
+.sports-image-container {
+    width: 60%; 
+}
+
+.sports-unit {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+}
+
+.sports-title {
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+}
+
+.sports-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; 
+    display: block;
+}
