@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caminar por Sotomayor</title>
+<style>
+:root{color-scheme:light dark;--background:light-dark(#fcfbf8,#18191b);--foreground:light-dark(#202123,#f1efeb);--muted-foreground:light-dark(#595952,#bdbbb3);--border:light-dark(#d8d6cd,#494a49)}
+*{box-sizing:border-box}body{margin:0;background:var(--background);color:var(--foreground);font:16px/1.45 system-ui,sans-serif}main{width:min(100% - 2rem,69rem);margin:2rem auto}h1{font-size:clamp(2rem,6vw,3.5rem);line-height:1.08;letter-spacing:-.04em;margin:0}header p{margin:.65rem 0 1rem}nav,.viz-row{display:flex;flex-wrap:wrap;gap:.45rem}nav{margin:1.1rem 0 1.6rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}.btn{display:inline-flex;align-items:center;min-height:2.5rem;border:1px solid var(--border);border-radius:.5rem;padding:.35rem .75rem;background:var(--background);color:var(--foreground);font:inherit;cursor:pointer;text-decoration:none}.btn[aria-pressed=true],.btn[aria-current=page]{background:var(--foreground);color:var(--background);border-color:var(--foreground)}.btn-ghost{border-color:transparent}.text-small{font-size:.82rem}.text-muted{color:var(--muted-foreground)}
+</style>
+</head>
+<body><main>
+<header><h1>Caminar por Sotomayor</h1><p>Dos visualizaciones interactivas de 96 respuestas sobre el desplazamiento en Plaza Sotomayor.</p></header>
+<nav aria-label="Elegir visualización">
+<a class="btn" data-view="pistas" href="#pistas">Pistas horizontales</a>
+<a class="btn" data-view="libre" href="#libre">Caminata libre</a>
+</nav>
+<div id="visualizacion"></div>
+</main>
+<template id="pistas">
+<section id="sotomayor-caminantes">
+  <div class="graph-view" data-graph>
+  <h2>Formas de caminar por Sotomayor</h2>
+  <div class="walking-layout" data-layout>
+  <div class="comfort-key" data-comfort aria-label="Color por nivel de comodidad"></div>
+  <div class="category-key" data-groups hidden aria-label="Subcategorías y cantidad de respuestas"></div>
+  <div class="trace-stage" data-stage aria-label="Figuras de las 96 personas encuestadas">
+    <div class="trace-dividers" data-dividers aria-hidden="true"></div>
+  </div>
+  </div>
+  <div class="viz-row" role="group" aria-label="Agrupar las figuras">
+    <button type="button" class="btn" data-field="0">Edades</button>
+    <button type="button" class="btn" data-field="1">Ocupación</button>
+    <button type="button" class="btn" data-field="6">Dificultades</button>
+    <button type="button" class="btn" data-field="3">Transporte</button>
+    <button type="button" class="btn btn-ghost" data-pause>Pausar movimiento</button>
+  </div>
+  <p class="text-small text-muted" data-status aria-live="polite"></p>
+  </div>
+  <section data-detail hidden aria-labelledby="sotomayor-detail-title">
+    <button type="button" class="btn" data-back>Volver al gráfico</button>
+    <div class="detail-body">
+    <h3 id="sotomayor-detail-title" data-detail-title></h3>
+    <dl data-answers></dl>
+    </div>
+  </section>
+</section>
+<style>
+  #sotomayor-caminantes {display:grid}
+  #sotomayor-caminantes :is(.graph-view,[data-detail]) {grid-area:1 / 1;min-width:0}
+  #sotomayor-caminantes .graph-view {display:grid;gap:.65rem;align-self:start}
+  #sotomayor-caminantes[data-detail-open] .graph-view {visibility:hidden}
+  #sotomayor-caminantes :is(h2,h3,p,dl,dd) {margin:0}
+  #sotomayor-caminantes [hidden] {display:none}
+  #sotomayor-caminantes .walking-layout {display:grid;grid-template-columns:minmax(5.5rem,10.5rem) minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:.6rem}
+  #sotomayor-caminantes :is(.comfort-key,.category-key,.trace-dividers) {display:grid;grid-template-rows:repeat(var(--groups,5),minmax(0,1fr))}
+  #sotomayor-caminantes .category-key[hidden] {display:none}
+  #sotomayor-caminantes :is(.comfort-key,.category-key) {grid-column:1;grid-row:2}
+  #sotomayor-caminantes :is(.comfort-key,.category-key) > div {min-width:0;align-self:center;overflow-wrap:anywhere}
+  #sotomayor-caminantes .walking-layout[data-grouped] .comfort-key {grid-area:1 / 1 / 2 / -1;display:flex;flex-wrap:wrap;gap:.35rem .8rem;margin-bottom:.55rem}
+  #sotomayor-caminantes .category-key {color:light-dark(#a72164,#ff83bb)}
+  #sotomayor-caminantes .category-key span {display:block;color:var(--muted-foreground)}
+  #sotomayor-caminantes .trace-stage {grid-column:2;grid-row:2;height:calc(var(--groups,5)*4.6rem);position:relative;overflow:hidden}
+  #sotomayor-caminantes .trace-dividers {position:absolute;inset:0;pointer-events:none}
+  #sotomayor-caminantes .trace-dividers span + span {border-block-start:1px solid var(--border)}
+  #sotomayor-caminantes .trace-slot {position:absolute;top:var(--y);left:var(--rest-x);width:1.25rem;height:1.8rem;transform:translateY(-50%);animation:sotomayor-cross var(--crossing) linear var(--start) infinite;transition:top .55s;pointer-events:none}
+  @keyframes sotomayor-cross {from {left:0} to {left:calc(100% - 1.25rem)}}
+  #sotomayor-caminantes [data-level="0"] {--ink:light-dark(#df478f,#ff79b7)}
+  #sotomayor-caminantes [data-level="1"] {--ink:light-dark(#679500,#a8d43b)}
+  #sotomayor-caminantes [data-level="2"] {--ink:light-dark(#d2a600,#ffdc36)}
+  #sotomayor-caminantes [data-level="3"] {--ink:light-dark(#1b95c5,#56c6f4)}
+  #sotomayor-caminantes [data-level="4"] {--ink:light-dark(#c81937,#ff6374)}
+  #sotomayor-caminantes .swatch {display:block;width:1.05rem;height:3px;margin:.2rem 0 0;background:var(--ink)}
+  #sotomayor-caminantes .trace-slot[data-level="0"] {--stride:13deg;--lean:3deg;--pace:1.6s;--drift:7%;--bob:-.3px;--reach:-17deg}
+  #sotomayor-caminantes .trace-slot[data-level="1"] {--stride:21deg;--lean:9deg;--pace:1.35s;--drift:12%;--bob:-.6px;--reach:-9deg}
+  #sotomayor-caminantes .trace-slot[data-level="2"] {--stride:28deg;--lean:2deg;--pace:1.1s;--drift:17%;--bob:-1px;--reach:0deg}
+  #sotomayor-caminantes .trace-slot[data-level="3"] {--stride:37deg;--lean:0deg;--pace:.95s;--drift:20%;--bob:-1.45px;--reach:0deg}
+  #sotomayor-caminantes .trace-slot[data-level="4"] {--stride:45deg;--lean:-5deg;--pace:.85s;--drift:25%;--bob:-2px;--reach:4deg}
+  #sotomayor-caminantes .trace {position:absolute;inset:0;width:100%;padding:0;border:0;background:transparent;color:var(--ink);pointer-events:auto}
+  #sotomayor-caminantes .trace:disabled {pointer-events:none}
+  #sotomayor-caminantes .trace[aria-pressed="true"],#sotomayor-caminantes .trace:not(:disabled):hover {outline:1px solid var(--foreground)}
+  #sotomayor-caminantes .trace-slot:focus-within {z-index:2}
+  #sotomayor-caminantes .walker {position:absolute;top:4px;left:50%;width:12px;height:27px;transform:translateX(-50%);}
+  #sotomayor-caminantes .body {position:absolute;inset:0;transform-origin:50% 55%;animation:sotomayor-body calc(var(--pace) / 2) ease-in-out var(--phase) infinite alternate}
+  #sotomayor-caminantes .head {position:absolute;width:6px;height:6px;top:0;left:3px;border-radius:50%;background:currentColor}
+  #sotomayor-caminantes .torso {position:absolute;width:4px;height:9px;top:7px;left:4px;border-radius:2px;background:currentColor}
+  #sotomayor-caminantes .limb {position:absolute;width:2px;border-radius:1px;background:currentColor;transform-origin:50% 1px;animation:sotomayor-step var(--pace) ease-in-out var(--phase) infinite alternate}
+  #sotomayor-caminantes .arm {left:5px;top:8px;height:8px;animation-name:sotomayor-arm}
+  #sotomayor-caminantes .leg {left:5px;top:15px;height:10px}
+  #sotomayor-caminantes .far {opacity:.56;animation-direction:alternate-reverse}
+  #sotomayor-caminantes[data-paused] :is(.trace-slot,.body,.limb) {animation-play-state:paused}
+  @keyframes sotomayor-body {from {transform:rotate(var(--lean))} to {transform:translateY(var(--bob)) rotate(var(--lean))}}
+  @keyframes sotomayor-step {from {transform:rotate(calc(-1 * var(--stride)))} to {transform:rotate(var(--stride))}}
+  @keyframes sotomayor-arm {from {transform:rotate(calc(var(--reach) - var(--stride) / 2))} to {transform:rotate(calc(var(--reach) + var(--stride) / 2))}}
+  #sotomayor-caminantes [data-detail] {display:grid;grid-template-rows:auto 1fr;gap:1.5rem;padding:clamp(1rem,4vw,3rem);background:var(--detail-bg);color:var(--detail-text,#171717);z-index:3}
+  #sotomayor-caminantes [data-detail][hidden] {display:none}
+  #sotomayor-caminantes [data-detail][data-level="0"] {--detail-bg:#ef73ae}
+  #sotomayor-caminantes [data-detail][data-level="1"] {--detail-bg:#a8cd35}
+  #sotomayor-caminantes [data-detail][data-level="2"] {--detail-bg:#ffdf24}
+  #sotomayor-caminantes [data-detail][data-level="3"] {--detail-bg:#4dbfe9}
+  #sotomayor-caminantes [data-detail][data-level="4"] {--detail-bg:#c2192c;--detail-text:#fff}
+  #sotomayor-caminantes [data-back] {justify-self:end}
+  #sotomayor-caminantes .detail-body {align-self:center;display:grid;gap:clamp(1.2rem,4vw,2.4rem);padding-block-end:1rem}
+  #sotomayor-caminantes dl {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1rem,5vw,3.5rem) 1rem}
+  #sotomayor-caminantes dt {font-weight:500;overflow-wrap:anywhere}
+  @media(max-width:620px) {#sotomayor-caminantes dl {grid-template-columns:repeat(2,minmax(0,1fr))}}
+  #sotomayor-caminantes dd {overflow-wrap:anywhere}
+  @media(prefers-reduced-motion:reduce) {
+    #sotomayor-caminantes:not([data-motion-override]) :is(.trace-slot,.body,.limb) {animation:none}
+    #sotomayor-caminantes .trace-slot {transition:none}
+  }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('sotomayor-caminantes');
+  const find = key => root.querySelector('[data-' + key + ']');
+  const stage = find('stage');
+  const layout = find('layout');
+  const groupRow = find('groups');
+  const dividers = find('dividers');
+  const pause = find('pause');
+  const detail = find('detail');
+  const graph = find('graph');
+  const back = find('back');
+  const buttons = [...root.querySelectorAll('[data-field]')];
+  const comfort = ['Muy incómodo','Incómodo','Ni cómodo ni incómodo','Cómodo','Muy cómodo'];
+  const categories = {
+    0:['18 a 25 años','26 a 35 años','36 a 50 años','51 a 65 años','Más de 65 años'],
+    1:['Estudiante','Trabajador dependiente','Independiente / Emprendedor','Jubilado / Pensionado','Jubilado y trabajando','Desempleado'],
+    3:['Metro','Automóvil particular','Micro / Bus','A pie / Bicicleta','Colectivo'],
+    6:['Tránsito de vehículos','Falta de señalización','Aglomeración en veredas','Dificultad para cruzar','Falta de espacio','Otras dificultades','Ninguna de las anteriores']
+  };
+  const questions = ['Rango de edad','Ocupación principal','Motivo de visita','Medio de llegada','Comodidad al desplazarse','Dificultad principal','Lugar mencionado','Comodidad y seguridad al cruzar'];
+  const responses = [{"codes":[0,0,0,0,2,2,6,13],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","Ninguna de las anteriores","","3"]},{"codes":[3,2,1,1,3,2,0,0],"answers":["51 a 65 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Automóvil particular","Cómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[1,1,2,1,2,2,2,1],"answers":["26 a 35 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Ni cómodo ni incómodo","La cantidad de personas en las veredas","prat con sotomayor","3"]},{"codes":[2,1,2,1,3,2,1,6],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La falta de señalización u orientación","centro de la plaA","3"]},{"codes":[2,1,2,1,3,2,1,0],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La falta de señalización u orientación","sotomayor con blanco","3"]},{"codes":[2,2,3,2,3,0,2,9],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","La cantidad de personas en las veredas","cochrane","1"]},{"codes":[0,0,2,2,3,2,3,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Micro / Bus","Cómodo","La dificultad para cruzar las calles","al medio de la plaza","3"]},{"codes":[4,4,3,1,0,2,2,11],"answers":["Más de 65 años","jubilado y trabajando","Trabajo / Trámites bancarios o públicos","Automóvil particular","Muy Incómodo","La cantidad de personas en las veredas","en toda la plaza","3"]},{"codes":[2,1,0,2,3,2,4,12],"answers":["36 a 50 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Cómodo","La falta de espacio para caminar","llegando a la aduna","3"]},{"codes":[2,2,3,3,1,0,5,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Caminando / Bicicleta","Incómodo","inseguridad","todo","1"]},{"codes":[2,2,3,1,2,4,5,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","delincuencia","todo","5"]},{"codes":[2,2,3,2,3,3,5,12],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","mal mantenimiento de las calles","en los cruces","4"]},{"codes":[0,2,2,2,2,3,1,11],"answers":["18 a 25 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Micro / Bus","Ni cómodo ni incómodo","La falta de señalización u orientación","toda la plaza","4"]},{"codes":[3,2,2,1,3,4,5,11],"answers":["51 a 65 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Automóvil particular","Cómodo","desconocimiento","toda la plaza","5"]},{"codes":[1,1,2,1,4,2,0,12],"answers":["26 a 35 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Muy cómodo","El transito de vehículos","camino a la plaza","3"]},{"codes":[1,2,3,3,4,2,5,1],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Caminando / Bicicleta","Muy cómodo","mal estado en la vereda","prat con sotomayor","3"]},{"codes":[1,2,0,3,3,2,5,12],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","miedo por la delimitación de la calle","al cruzar en diagonal","3"]},{"codes":[1,5,3,1,2,4,3,11],"answers":["26 a 35 años","Desempleado","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","La dificultad para cruzar las calles","en toda la plqza","5"]},{"codes":[1,2,0,3,2,1,0,1],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Ni cómodo ni incómodo","El transito de vehículos","prat con sotomayor","2"]},{"codes":[2,5,0,2,1,2,1,12],"answers":["36 a 50 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Incómodo","La falta de señalización u orientación","en las veredas que no existen","3"]},{"codes":[2,1,3,4,2,1,4,11],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Colectivo","Ni cómodo ni incómodo","La falta de espacio para caminar","en la plaza","2"]},{"codes":[2,1,3,2,3,2,2,12],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","La cantidad de personas en las veredas","en la calle plaza soto mayor","3"]},{"codes":[3,3,2,2,1,1,0,13],"answers":["51 a 65 años","Jubilado / Pensionado","Turismo / Paseo","Micro / Bus","Incómodo","El transito de vehículos","","2"]},{"codes":[3,3,2,3,1,2,4,2],"answers":["51 a 65 años","Jubilado / Pensionado","Turismo / Paseo","Caminando / Bicicleta","Incómodo","La falta de espacio para caminar","en esta intersección entre plaza soto mayor y cochrane","3"]},{"codes":[1,1,1,2,3,3,0,13],"answers":["26 a 35 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Micro / Bus","Cómodo","El transito de vehículos","","4"]},{"codes":[2,2,4,1,2,3,1,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Automóvil particular","Ni cómodo ni incómodo","La falta de señalización u orientación","en la plaza","4"]},{"codes":[0,0,0,0,2,2,0,3],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","El transito de vehículos","cruce estación puerto","3"]},{"codes":[1,1,3,2,3,3,2,1],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[2,2,4,4,1,1,0,0],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Colectivo","Incómodo","El transito de vehículos","sotomayor con blanco","2"]},{"codes":[3,1,2,2,3,2,4,9],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Micro / Bus","Cómodo","La falta de espacio para caminar","cochrane","3"]},{"codes":[0,0,2,3,4,4,6,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","centro de la plaza","5"]},{"codes":[1,2,1,0,2,2,1,6],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Ni cómodo ni incómodo","La falta de señalización u orientación","al medio de la plaza","3"]},{"codes":[2,1,3,1,1,1,0,0],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Automóvil particular","Incómodo","El transito de vehículos","sotomayor con blanco","2"]},{"codes":[4,3,0,2,0,0,3,4],"answers":["Más de 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en los cruces hacia el puerto","1"]},{"codes":[1,1,2,3,3,3,2,1],"answers":["26 a 35 años","Trabajador dependiente","Turismo / Paseo","Caminando / Bicicleta","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[2,2,3,0,3,3,6,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","Ninguna de las anteriores","toda la plaza","4"]},{"codes":[0,0,1,2,2,1,3,5],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","La dificultad para cruzar las calles","cruce con errazuriz","2"]},{"codes":[3,1,4,1,1,2,0,2],"answers":["51 a 65 años","Trabajador dependiente","Comercio (Comprando o vendiendo)","Automóvil particular","Incómodo","El transito de vehículos","cochrane con sotomayor","3"]},{"codes":[1,5,0,3,3,2,4,10],"answers":["26 a 35 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","La falta de espacio para caminar","veredas perimetrales","3"]},{"codes":[2,1,2,0,4,4,6,7],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Metro (Estación Puerto)","Muy cómodo","Ninguna de las anteriores","sector monumento","5"]},{"codes":[0,0,3,2,2,2,1,1],"answers":["18 a 25 años","Estudiante","Trabajo / Trámites bancarios o públicos","Micro / Bus","Ni cómodo ni incómodo","La falta de señalización u orientación","prat con sotomayor","3"]},{"codes":[3,3,0,2,2,1,2,11],"answers":["51 a 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","La cantidad de personas en las veredas","En la plaza","2"]},{"codes":[1,1,3,0,3,2,0,0],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","El transito de vehículos","blanco con sotomayor","3"]},{"codes":[0,0,0,2,2,2,2,1],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","La cantidad de personas en las veredas","prat con sotomayor","3"]},{"codes":[2,2,4,1,1,1,4,2],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Automóvil particular","Incómodo","La falta de espacio para caminar","cochrane con sotomayor","2"]},{"codes":[3,1,2,3,3,3,6,7],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Caminando / Bicicleta","Cómodo","Ninguna de las anteriores","sector monumento","4"]},{"codes":[1,2,1,2,2,2,0,0],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[2,1,3,4,3,1,3,3],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Colectivo","Cómodo","La dificultad para cruzar las calles","cruce estación puerto","2"]},{"codes":[0,0,2,0,4,4,6,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Metro (Estación Puerto)","Muy cómodo","Ninguna de las anteriores","centro de la plaza","5"]},{"codes":[4,3,3,2,0,0,3,11],"answers":["Más de 65 años","Jubilado / Pensionado","Trabajo / Trámites bancarios o públicos","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en toda la plaza","1"]},{"codes":[2,2,0,3,3,2,1,6],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","La falta de señalización u orientación","al medio de la plaza","3"]},{"codes":[1,5,0,2,1,1,4,10],"answers":["26 a 35 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Incómodo","La falta de espacio para caminar","veredas perimetrales","2"]},{"codes":[3,3,1,4,2,2,0,8],"answers":["51 a 65 años","Jubilado / Pensionado","Esperando a alguien o esperando transporte","Colectivo","Ni cómodo ni incómodo","El transito de vehículos","en blanco","3"]},{"codes":[0,0,1,0,2,2,1,3],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Ni cómodo ni incómodo","La falta de señalización u orientación","cruce estación puerto","3"]},{"codes":[2,1,2,1,3,3,2,1],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[1,1,3,2,3,2,0,0],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[2,2,4,1,1,1,0,9],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Automóvil particular","Incómodo","El transito de vehículos","cochrane","2"]},{"codes":[0,0,0,3,4,3,6,6],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","centro de la plaza","4"]},{"codes":[3,1,0,0,2,1,3,5],"answers":["51 a 65 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","La dificultad para cruzar las calles","cruce con errazuriz","2"]},{"codes":[1,2,2,3,3,3,2,1],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Caminando / Bicicleta","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[2,1,1,2,1,1,4,11],"answers":["36 a 50 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Micro / Bus","Incómodo","La falta de espacio para caminar","en la plaza","2"]},{"codes":[4,3,0,2,0,0,3,4],"answers":["Más de 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en los cruces hacia el puerto","1"]},{"codes":[1,1,3,0,4,4,6,13],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Muy cómodo","Ninguna de las anteriores","","5"]},{"codes":[2,2,3,4,2,2,1,0],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Colectivo","Ni cómodo ni incómodo","La falta de señalización u orientación","sotomayor con blanco","3"]},{"codes":[0,0,1,2,2,1,0,8],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","en blanco","2"]},{"codes":[3,1,2,1,3,2,0,2],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","El transito de vehículos","cochrane con sotomayor","3"]},{"codes":[2,1,0,3,3,3,2,10],"answers":["36 a 50 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","La cantidad de personas en las veredas","veredas perimetrales","4"]},{"codes":[2,1,3,1,2,2,1,13],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","La falta de señalización u orientación","","3"]},{"codes":[1,2,1,2,1,1,1,13],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Micro / Bus","Incómodo","La falta de señalización u orientación","","2"]},{"codes":[3,1,0,0,2,1,1,13],"answers":["51 a 65 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","La falta de señalización u orientación","","2"]},{"codes":[0,0,1,2,3,2,4,13],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Micro / Bus","Cómodo","La falta de espacio para caminar","","3"]},{"codes":[2,2,2,1,1,1,3,13],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Automóvil particular","Incómodo","La dificultad para cruzar las calles","","2"]},{"codes":[1,1,3,0,3,3,0,13],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","El transito de vehículos","","4"]},{"codes":[0,0,1,0,1,0,1,13],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Incómodo","La falta de señalización u orientación","","1"]},{"codes":[2,2,3,4,3,3,0,13],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Colectivo","Cómodo","El transito de vehículos","","4"]},{"codes":[3,3,1,3,0,0,3,11],"answers":["51 a 65 años","Jubilado / Pensionado","Esperando a alguien o esperando transporte","Caminando / Bicicleta","Muy Incómodo","La dificultad para cruzar las calles","en toda la plaza","1"]},{"codes":[1,1,0,2,2,2,0,8],"answers":["26 a 35 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","en blanco","3"]},{"codes":[2,2,3,0,3,3,6,13],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","Ninguna de las anteriores","en ningún lado, cuenta con hartos semáforos","4"]},{"codes":[2,1,1,4,1,1,5,12],"answers":["36 a 50 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Colectivo","Incómodo","la delincuencia","en las esquinas, calles más cerradas","2"]},{"codes":[0,0,0,3,2,1,0,12],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Ni cómodo ni incómodo","El transito de vehículos","en sotomayor","2"]},{"codes":[3,1,2,0,3,1,0,0],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Metro (Estación Puerto)","Cómodo","El transito de vehículos","blanco con sotomayor","2"]},{"codes":[1,1,3,0,3,2,0,0],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","El transito de vehículos","blanco con sotomayor","3"]},{"codes":[0,0,0,2,2,2,2,1],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","La cantidad de personas en las veredas","prat con sotomayor","3"]},{"codes":[2,2,2,3,4,4,6,7],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","sector monumento","5"]},{"codes":[3,1,1,1,1,1,0,0],"answers":["51 a 65 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Automóvil particular","Incómodo","El transito de vehículos","sotomayor con blanco","2"]},{"codes":[4,3,0,2,0,0,3,4],"answers":["Más de 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en los cruces hacia el puerto","1"]},{"codes":[1,1,0,0,3,3,4,10],"answers":["26 a 35 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Cómodo","La falta de espacio para caminar","veredas perimetrales","4"]},{"codes":[2,2,4,4,1,1,4,2],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Colectivo","Incómodo","La falta de espacio para caminar","cochrane con sotomayor","2"]},{"codes":[0,0,2,3,4,4,6,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","centro de la plaza","5"]},{"codes":[2,1,3,1,2,2,1,6],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","La falta de señalización u orientación","al medio de la plaza","3"]},{"codes":[3,3,1,2,2,2,0,8],"answers":["51 a 65 años","Jubilado / Pensionado","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","en blanco","3"]},{"codes":[1,5,0,2,1,1,3,5],"answers":["26 a 35 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Incómodo","La dificultad para cruzar las calles","cruce con errazuriz","2"]},{"codes":[0,0,1,0,3,3,1,3],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Cómodo","La falta de señalización u orientación","cruce estación puerto","4"]},{"codes":[2,2,3,4,3,2,0,0],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Colectivo","Cómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[3,1,2,1,3,3,2,1],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[1,2,2,3,4,4,6,11],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","toda la plaza","5"]}];
+  let field = 4;
+  let paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let selected = -1;
+
+  function make(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function choose(id) {
+    if (!paused) return;
+    selected = id;
+    traces.forEach((trace,index)=>trace.control.setAttribute('aria-pressed',String(index===id)));
+    find('detail-title').textContent = 'Respuesta ' + (id+1) + ' de ' + responses.length;
+    find('answers').replaceChildren(...questions.map((question,index)=>{
+      const item=make('div');
+      const raw=responses[id].answers[index];
+      const answer = !raw || raw.toLowerCase()==='null' ? 'Sin indicación' : index===7 ? raw+' de 5' : raw;
+      item.append(make('dt','',question),make('dd','',answer));
+      return item;
+    }));
+    detail.dataset.level = responses[id].codes[4];
+    detail.hidden = false;
+    graph.inert = true;
+    root.setAttribute('data-detail-open','');
+    back.focus();
+  }
+
+  function closeDetail() {
+    if (detail.hidden) return;
+    const control = traces[selected].control;
+    detail.hidden = true;
+    graph.inert = false;
+    root.removeAttribute('data-detail-open');
+    control.setAttribute('aria-pressed','false');
+    selected = -1;
+    control.focus();
+  }
+
+  const traces = responses.map((response,id)=>{
+    const slot = make('div','trace-slot');
+    const control = make('button','trace');
+    const walker = make('span','walker');
+    const body = make('span','body');
+    for (const part of ['leg limb far','arm limb far','torso','head','leg limb','arm limb']) {
+      body.append(make('span',part));
+    }
+    walker.append(body);
+    walker.setAttribute('aria-hidden','true');
+    control.append(walker);
+    slot.style.setProperty('--phase',(-.13*(id*23%29))+'s');
+    slot.dataset.level = response.codes[4];
+    control.type = 'button';
+    control.setAttribute('aria-label','Persona, respuesta ' + (id+1) + ', ' + comfort[response.codes[4]]);
+    control.setAttribute('aria-pressed','false');
+    control.addEventListener('click',()=>choose(id));
+    slot.append(control);
+    return {slot,control};
+  });
+
+  find('comfort').replaceChildren(...comfort.map((name,index)=>{
+    const item=make('div','text-small',name);
+    const swatch=make('span','swatch');
+    item.dataset.level=index;
+    swatch.setAttribute('aria-hidden','true');
+    item.append(swatch);
+    return item;
+  }));
+
+  function regroup() {
+    const labels=field===4?comfort:categories[field];
+    root.style.setProperty('--groups',labels.length);
+    groupRow.hidden=field===4;
+    layout.toggleAttribute('data-grouped',field!==4);
+    dividers.replaceChildren(...labels.map(()=>make('span')));
+    groupRow.replaceChildren(...labels.map((label,index)=>{
+      const group=responses.map((response,id)=>({response,id}))
+        .filter(item=>item.response.codes[field]===index)
+        .sort((a,b)=>a.response.codes[4]-b.response.codes[4] || a.id-b.id);
+      group.forEach(({id},position)=>{
+        const slot=traces[id].slot;
+        const step=100/labels.length;
+        const lanes = Math.min(3, group.length);
+        const lane = position % lanes;
+        const y = (index+.5+(lane-(lanes-1)/2)*.23)*step;
+        const level = responses[id].codes[4];
+        const duration = [27,22,17,13,10][level];
+        const phase = (position+.42)/group.length;
+        slot.style.setProperty('--y',y+'%');
+        slot.style.setProperty('--crossing',duration+'s');
+        slot.style.setProperty('--start',(-duration*phase)+'s');
+        slot.style.setProperty('--rest-x',(phase*93)+'%');
+      });
+      const title=make('div','text-small',label);
+      title.append(make('span','text-small',String(group.length)));
+      return title;
+    }));
+    buttons.forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.field)===field)));
+  }
+
+  function updateMotion() {
+    root.toggleAttribute('data-paused',paused);
+    pause.textContent=paused?'Reanudar movimiento':'Pausar movimiento';
+    pause.setAttribute('aria-pressed',String(paused));
+    for(const trace of traces) trace.control.disabled=!paused;
+    if(!paused) {
+      if(selected>=0) traces[selected].control.setAttribute('aria-pressed','false');
+      selected=-1;
+      detail.hidden=true;
+    }
+    find('status').textContent=paused?'Movimiento pausado. Selecciona una figura para ver sus respuestas.':'96 personas · La velocidad interpreta la comodidad declarada. Pausa para abrir una respuesta.';
+  }
+
+  buttons.forEach(button=>button.addEventListener('click',()=>{
+    const next=Number(button.dataset.field);
+    field=field===next?4:next;
+    regroup();
+  }));
+  pause.addEventListener('click',()=>{
+    paused=!paused;
+    if(!paused) root.setAttribute('data-motion-override','');
+    updateMotion();
+  });
+  back.addEventListener('click',closeDetail);
+  detail.addEventListener('keydown',event=>{
+    if (event.key === 'Escape') closeDetail();
+  });
+  regroup();
+  stage.append(...traces.map(trace=>trace.slot));
+  updateMotion();
+})();
+</script>
+
+</template>
+<template id="libre">
+<section id="sotomayor-caminata-libre">
+  <div class="graph-view" data-graph>
+  <h2>Caminata libre por Sotomayor</h2>
+  <div class="walking-layout" data-layout>
+  <div class="comfort-key" data-comfort aria-label="Color por nivel de comodidad"></div>
+  <div class="category-key" data-groups hidden aria-label="Subcategorías y cantidad de respuestas"></div>
+  <div class="trace-stage" data-stage aria-label="Figuras de las 96 personas encuestadas">
+    <div class="trace-dividers" data-dividers aria-hidden="true"></div>
+  </div>
+  </div>
+  <div class="viz-row" role="group" aria-label="Agrupar las figuras">
+    <button type="button" class="btn" data-field="0">Edades</button>
+    <button type="button" class="btn" data-field="1">Ocupación</button>
+    <button type="button" class="btn" data-field="6">Dificultades</button>
+    <button type="button" class="btn" data-field="3">Transporte</button>
+    <button type="button" class="btn btn-ghost" data-pause>Pausar movimiento</button>
+  </div>
+  <p class="text-small text-muted" data-status aria-live="polite"></p>
+  </div>
+  <section data-detail hidden aria-labelledby="sotomayor-detail-title">
+    <button type="button" class="btn" data-back>Volver al gráfico</button>
+    <div class="detail-body">
+    <h3 id="sotomayor-detail-title" data-detail-title></h3>
+    <dl data-answers></dl>
+    </div>
+  </section>
+</section>
+<style>
+  #sotomayor-caminata-libre {display:grid}
+  #sotomayor-caminata-libre :is(.graph-view,[data-detail]) {grid-area:1 / 1;min-width:0}
+  #sotomayor-caminata-libre .graph-view {display:grid;gap:.65rem;align-self:start}
+  #sotomayor-caminata-libre[data-detail-open] .graph-view {visibility:hidden}
+  #sotomayor-caminata-libre :is(h2,h3,p,dl,dd) {margin:0}
+  #sotomayor-caminata-libre [hidden] {display:none}
+  #sotomayor-caminata-libre .walking-layout {display:grid;grid-template-columns:minmax(5.5rem,10.5rem) minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:.6rem}
+  #sotomayor-caminata-libre :is(.comfort-key,.category-key,.trace-dividers) {display:grid;grid-template-rows:repeat(var(--groups,5),minmax(0,1fr))}
+  #sotomayor-caminata-libre .category-key[hidden] {display:none}
+  #sotomayor-caminata-libre :is(.comfort-key,.category-key) {grid-column:1;grid-row:2}
+  #sotomayor-caminata-libre :is(.comfort-key,.category-key) > div {min-width:0;align-self:center;overflow-wrap:anywhere}
+  #sotomayor-caminata-libre .walking-layout[data-grouped] .comfort-key {grid-area:1 / 1 / 2 / -1;display:flex;flex-wrap:wrap;gap:.35rem .8rem;margin-bottom:.55rem}
+  #sotomayor-caminata-libre .category-key {color:light-dark(#a72164,#ff83bb)}
+  #sotomayor-caminata-libre .category-key span {display:block;color:var(--muted-foreground)}
+  #sotomayor-caminata-libre .trace-stage {grid-column:2;grid-row:2;height:calc(var(--groups,5)*4.6rem);position:relative;overflow:hidden}
+  #sotomayor-caminata-libre .walking-layout:not([data-grouped]) .comfort-key {grid-area:1 / 1 / 2 / -1;display:flex;flex-wrap:wrap;gap:.35rem .8rem;margin-bottom:.6rem}
+  #sotomayor-caminata-libre .walking-layout:not([data-grouped]) .trace-stage {grid-column:1 / -1;height:clamp(18rem,43vh,26rem)}
+  #sotomayor-caminata-libre .walking-layout:not([data-grouped]) .trace-dividers {display:none}
+  #sotomayor-caminata-libre .walking-layout:not([data-grouped]) .trace-slot {left:var(--free-x);top:var(--free-y);animation:none;transition:none}
+  #sotomayor-caminata-libre .walking-layout:not([data-grouped]) .walker {transform:translateX(-50%) scaleX(var(--direction,1))}
+  #sotomayor-caminata-libre .trace-dividers {position:absolute;inset:0;pointer-events:none}
+  #sotomayor-caminata-libre .trace-dividers span + span {border-block-start:1px solid var(--border)}
+  #sotomayor-caminata-libre .trace-slot {position:absolute;top:var(--y);left:var(--rest-x);width:1.25rem;height:1.8rem;transform:translateY(-50%);animation:sotomayor-cross var(--crossing) linear var(--start) infinite;transition:top .55s;pointer-events:none}
+  @keyframes sotomayor-cross {from {left:0} to {left:calc(100% - 1.25rem)}}
+  #sotomayor-caminata-libre [data-level="0"] {--ink:light-dark(#df478f,#ff79b7)}
+  #sotomayor-caminata-libre [data-level="1"] {--ink:light-dark(#679500,#a8d43b)}
+  #sotomayor-caminata-libre [data-level="2"] {--ink:light-dark(#d2a600,#ffdc36)}
+  #sotomayor-caminata-libre [data-level="3"] {--ink:light-dark(#1b95c5,#56c6f4)}
+  #sotomayor-caminata-libre [data-level="4"] {--ink:light-dark(#c81937,#ff6374)}
+  #sotomayor-caminata-libre .swatch {display:block;width:1.05rem;height:3px;margin:.2rem 0 0;background:var(--ink)}
+  #sotomayor-caminata-libre .trace-slot[data-level="0"] {--stride:13deg;--lean:3deg;--pace:1.6s;--drift:7%;--bob:-.3px;--reach:-17deg}
+  #sotomayor-caminata-libre .trace-slot[data-level="1"] {--stride:21deg;--lean:9deg;--pace:1.35s;--drift:12%;--bob:-.6px;--reach:-9deg}
+  #sotomayor-caminata-libre .trace-slot[data-level="2"] {--stride:28deg;--lean:2deg;--pace:1.1s;--drift:17%;--bob:-1px;--reach:0deg}
+  #sotomayor-caminata-libre .trace-slot[data-level="3"] {--stride:37deg;--lean:0deg;--pace:.95s;--drift:20%;--bob:-1.45px;--reach:0deg}
+  #sotomayor-caminata-libre .trace-slot[data-level="4"] {--stride:45deg;--lean:-5deg;--pace:.85s;--drift:25%;--bob:-2px;--reach:4deg}
+  #sotomayor-caminata-libre .trace {position:absolute;inset:0;width:100%;padding:0;border:0;background:transparent;color:var(--ink);pointer-events:auto}
+  #sotomayor-caminata-libre .trace:disabled {pointer-events:none}
+  #sotomayor-caminata-libre .trace[aria-pressed="true"],#sotomayor-caminata-libre .trace:not(:disabled):hover {outline:1px solid var(--foreground)}
+  #sotomayor-caminata-libre .trace-slot:focus-within {z-index:2}
+  #sotomayor-caminata-libre .walker {position:absolute;top:4px;left:50%;width:12px;height:27px;transform:translateX(-50%);}
+  #sotomayor-caminata-libre .body {position:absolute;inset:0;transform-origin:50% 55%;animation:sotomayor-body calc(var(--pace) / 2) ease-in-out var(--phase) infinite alternate}
+  #sotomayor-caminata-libre .head {position:absolute;width:6px;height:6px;top:0;left:3px;border-radius:50%;background:currentColor}
+  #sotomayor-caminata-libre .torso {position:absolute;width:4px;height:9px;top:7px;left:4px;border-radius:2px;background:currentColor}
+  #sotomayor-caminata-libre .limb {position:absolute;width:2px;border-radius:1px;background:currentColor;transform-origin:50% 1px;animation:sotomayor-step var(--pace) ease-in-out var(--phase) infinite alternate}
+  #sotomayor-caminata-libre .arm {left:5px;top:8px;height:8px;animation-name:sotomayor-arm}
+  #sotomayor-caminata-libre .leg {left:5px;top:15px;height:10px}
+  #sotomayor-caminata-libre .far {opacity:.56;animation-direction:alternate-reverse}
+  #sotomayor-caminata-libre[data-paused] :is(.trace-slot,.body,.limb) {animation-play-state:paused}
+  @keyframes sotomayor-body {from {transform:rotate(var(--lean))} to {transform:translateY(var(--bob)) rotate(var(--lean))}}
+  @keyframes sotomayor-step {from {transform:rotate(calc(-1 * var(--stride)))} to {transform:rotate(var(--stride))}}
+  @keyframes sotomayor-arm {from {transform:rotate(calc(var(--reach) - var(--stride) / 2))} to {transform:rotate(calc(var(--reach) + var(--stride) / 2))}}
+  #sotomayor-caminata-libre [data-detail] {display:grid;grid-template-rows:auto 1fr;gap:1.5rem;padding:clamp(1rem,4vw,3rem);background:var(--detail-bg);color:var(--detail-text,#171717);z-index:3}
+  #sotomayor-caminata-libre [data-detail][hidden] {display:none}
+  #sotomayor-caminata-libre [data-detail][data-level="0"] {--detail-bg:#ef73ae}
+  #sotomayor-caminata-libre [data-detail][data-level="1"] {--detail-bg:#a8cd35}
+  #sotomayor-caminata-libre [data-detail][data-level="2"] {--detail-bg:#ffdf24}
+  #sotomayor-caminata-libre [data-detail][data-level="3"] {--detail-bg:#4dbfe9}
+  #sotomayor-caminata-libre [data-detail][data-level="4"] {--detail-bg:#c2192c;--detail-text:#fff}
+  #sotomayor-caminata-libre [data-back] {justify-self:end}
+  #sotomayor-caminata-libre .detail-body {align-self:center;display:grid;gap:clamp(1.2rem,4vw,2.4rem);padding-block-end:1rem}
+  #sotomayor-caminata-libre dl {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(1rem,5vw,3.5rem) 1rem}
+  #sotomayor-caminata-libre dt {font-weight:500;overflow-wrap:anywhere}
+  @media(max-width:620px) {#sotomayor-caminata-libre dl {grid-template-columns:repeat(2,minmax(0,1fr))}}
+  #sotomayor-caminata-libre dd {overflow-wrap:anywhere}
+  @media(prefers-reduced-motion:reduce) {
+    #sotomayor-caminata-libre:not([data-motion-override]) :is(.trace-slot,.body,.limb) {animation:none}
+    #sotomayor-caminata-libre .trace-slot {transition:none}
+  }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('sotomayor-caminata-libre');
+  const find = key => root.querySelector('[data-' + key + ']');
+  const stage = find('stage');
+  const layout = find('layout');
+  const groupRow = find('groups');
+  const dividers = find('dividers');
+  const pause = find('pause');
+  const detail = find('detail');
+  const graph = find('graph');
+  const back = find('back');
+  const buttons = [...root.querySelectorAll('[data-field]')];
+  const comfort = ['Muy incómodo','Incómodo','Ni cómodo ni incómodo','Cómodo','Muy cómodo'];
+  const categories = {
+    0:['18 a 25 años','26 a 35 años','36 a 50 años','51 a 65 años','Más de 65 años'],
+    1:['Estudiante','Trabajador dependiente','Independiente / Emprendedor','Jubilado / Pensionado','Jubilado y trabajando','Desempleado'],
+    3:['Metro','Automóvil particular','Micro / Bus','A pie / Bicicleta','Colectivo'],
+    6:['Tránsito de vehículos','Falta de señalización','Aglomeración en veredas','Dificultad para cruzar','Falta de espacio','Otras dificultades','Ninguna de las anteriores']
+  };
+  const questions = ['Rango de edad','Ocupación principal','Motivo de visita','Medio de llegada','Comodidad al desplazarse','Dificultad principal','Lugar mencionado','Comodidad y seguridad al cruzar'];
+  const responses = [{"codes":[0,0,0,0,2,2,6,13],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","Ninguna de las anteriores","","3"]},{"codes":[3,2,1,1,3,2,0,0],"answers":["51 a 65 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Automóvil particular","Cómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[1,1,2,1,2,2,2,1],"answers":["26 a 35 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Ni cómodo ni incómodo","La cantidad de personas en las veredas","prat con sotomayor","3"]},{"codes":[2,1,2,1,3,2,1,6],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La falta de señalización u orientación","centro de la plaA","3"]},{"codes":[2,1,2,1,3,2,1,0],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La falta de señalización u orientación","sotomayor con blanco","3"]},{"codes":[2,2,3,2,3,0,2,9],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","La cantidad de personas en las veredas","cochrane","1"]},{"codes":[0,0,2,2,3,2,3,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Micro / Bus","Cómodo","La dificultad para cruzar las calles","al medio de la plaza","3"]},{"codes":[4,4,3,1,0,2,2,11],"answers":["Más de 65 años","jubilado y trabajando","Trabajo / Trámites bancarios o públicos","Automóvil particular","Muy Incómodo","La cantidad de personas en las veredas","en toda la plaza","3"]},{"codes":[2,1,0,2,3,2,4,12],"answers":["36 a 50 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Cómodo","La falta de espacio para caminar","llegando a la aduna","3"]},{"codes":[2,2,3,3,1,0,5,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Caminando / Bicicleta","Incómodo","inseguridad","todo","1"]},{"codes":[2,2,3,1,2,4,5,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","delincuencia","todo","5"]},{"codes":[2,2,3,2,3,3,5,12],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","mal mantenimiento de las calles","en los cruces","4"]},{"codes":[0,2,2,2,2,3,1,11],"answers":["18 a 25 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Micro / Bus","Ni cómodo ni incómodo","La falta de señalización u orientación","toda la plaza","4"]},{"codes":[3,2,2,1,3,4,5,11],"answers":["51 a 65 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Automóvil particular","Cómodo","desconocimiento","toda la plaza","5"]},{"codes":[1,1,2,1,4,2,0,12],"answers":["26 a 35 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Muy cómodo","El transito de vehículos","camino a la plaza","3"]},{"codes":[1,2,3,3,4,2,5,1],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Caminando / Bicicleta","Muy cómodo","mal estado en la vereda","prat con sotomayor","3"]},{"codes":[1,2,0,3,3,2,5,12],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","miedo por la delimitación de la calle","al cruzar en diagonal","3"]},{"codes":[1,5,3,1,2,4,3,11],"answers":["26 a 35 años","Desempleado","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","La dificultad para cruzar las calles","en toda la plqza","5"]},{"codes":[1,2,0,3,2,1,0,1],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Ni cómodo ni incómodo","El transito de vehículos","prat con sotomayor","2"]},{"codes":[2,5,0,2,1,2,1,12],"answers":["36 a 50 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Incómodo","La falta de señalización u orientación","en las veredas que no existen","3"]},{"codes":[2,1,3,4,2,1,4,11],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Colectivo","Ni cómodo ni incómodo","La falta de espacio para caminar","en la plaza","2"]},{"codes":[2,1,3,2,3,2,2,12],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","La cantidad de personas en las veredas","en la calle plaza soto mayor","3"]},{"codes":[3,3,2,2,1,1,0,13],"answers":["51 a 65 años","Jubilado / Pensionado","Turismo / Paseo","Micro / Bus","Incómodo","El transito de vehículos","","2"]},{"codes":[3,3,2,3,1,2,4,2],"answers":["51 a 65 años","Jubilado / Pensionado","Turismo / Paseo","Caminando / Bicicleta","Incómodo","La falta de espacio para caminar","en esta intersección entre plaza soto mayor y cochrane","3"]},{"codes":[1,1,1,2,3,3,0,13],"answers":["26 a 35 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Micro / Bus","Cómodo","El transito de vehículos","","4"]},{"codes":[2,2,4,1,2,3,1,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Automóvil particular","Ni cómodo ni incómodo","La falta de señalización u orientación","en la plaza","4"]},{"codes":[0,0,0,0,2,2,0,3],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","El transito de vehículos","cruce estación puerto","3"]},{"codes":[1,1,3,2,3,3,2,1],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[2,2,4,4,1,1,0,0],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Colectivo","Incómodo","El transito de vehículos","sotomayor con blanco","2"]},{"codes":[3,1,2,2,3,2,4,9],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Micro / Bus","Cómodo","La falta de espacio para caminar","cochrane","3"]},{"codes":[0,0,2,3,4,4,6,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","centro de la plaza","5"]},{"codes":[1,2,1,0,2,2,1,6],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Ni cómodo ni incómodo","La falta de señalización u orientación","al medio de la plaza","3"]},{"codes":[2,1,3,1,1,1,0,0],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Automóvil particular","Incómodo","El transito de vehículos","sotomayor con blanco","2"]},{"codes":[4,3,0,2,0,0,3,4],"answers":["Más de 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en los cruces hacia el puerto","1"]},{"codes":[1,1,2,3,3,3,2,1],"answers":["26 a 35 años","Trabajador dependiente","Turismo / Paseo","Caminando / Bicicleta","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[2,2,3,0,3,3,6,11],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","Ninguna de las anteriores","toda la plaza","4"]},{"codes":[0,0,1,2,2,1,3,5],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","La dificultad para cruzar las calles","cruce con errazuriz","2"]},{"codes":[3,1,4,1,1,2,0,2],"answers":["51 a 65 años","Trabajador dependiente","Comercio (Comprando o vendiendo)","Automóvil particular","Incómodo","El transito de vehículos","cochrane con sotomayor","3"]},{"codes":[1,5,0,3,3,2,4,10],"answers":["26 a 35 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","La falta de espacio para caminar","veredas perimetrales","3"]},{"codes":[2,1,2,0,4,4,6,7],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Metro (Estación Puerto)","Muy cómodo","Ninguna de las anteriores","sector monumento","5"]},{"codes":[0,0,3,2,2,2,1,1],"answers":["18 a 25 años","Estudiante","Trabajo / Trámites bancarios o públicos","Micro / Bus","Ni cómodo ni incómodo","La falta de señalización u orientación","prat con sotomayor","3"]},{"codes":[3,3,0,2,2,1,2,11],"answers":["51 a 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","La cantidad de personas en las veredas","En la plaza","2"]},{"codes":[1,1,3,0,3,2,0,0],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","El transito de vehículos","blanco con sotomayor","3"]},{"codes":[0,0,0,2,2,2,2,1],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","La cantidad de personas en las veredas","prat con sotomayor","3"]},{"codes":[2,2,4,1,1,1,4,2],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Automóvil particular","Incómodo","La falta de espacio para caminar","cochrane con sotomayor","2"]},{"codes":[3,1,2,3,3,3,6,7],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Caminando / Bicicleta","Cómodo","Ninguna de las anteriores","sector monumento","4"]},{"codes":[1,2,1,2,2,2,0,0],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[2,1,3,4,3,1,3,3],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Colectivo","Cómodo","La dificultad para cruzar las calles","cruce estación puerto","2"]},{"codes":[0,0,2,0,4,4,6,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Metro (Estación Puerto)","Muy cómodo","Ninguna de las anteriores","centro de la plaza","5"]},{"codes":[4,3,3,2,0,0,3,11],"answers":["Más de 65 años","Jubilado / Pensionado","Trabajo / Trámites bancarios o públicos","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en toda la plaza","1"]},{"codes":[2,2,0,3,3,2,1,6],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","La falta de señalización u orientación","al medio de la plaza","3"]},{"codes":[1,5,0,2,1,1,4,10],"answers":["26 a 35 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Incómodo","La falta de espacio para caminar","veredas perimetrales","2"]},{"codes":[3,3,1,4,2,2,0,8],"answers":["51 a 65 años","Jubilado / Pensionado","Esperando a alguien o esperando transporte","Colectivo","Ni cómodo ni incómodo","El transito de vehículos","en blanco","3"]},{"codes":[0,0,1,0,2,2,1,3],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Ni cómodo ni incómodo","La falta de señalización u orientación","cruce estación puerto","3"]},{"codes":[2,1,2,1,3,3,2,1],"answers":["36 a 50 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[1,1,3,2,3,2,0,0],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Micro / Bus","Cómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[2,2,4,1,1,1,0,9],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Automóvil particular","Incómodo","El transito de vehículos","cochrane","2"]},{"codes":[0,0,0,3,4,3,6,6],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","centro de la plaza","4"]},{"codes":[3,1,0,0,2,1,3,5],"answers":["51 a 65 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","La dificultad para cruzar las calles","cruce con errazuriz","2"]},{"codes":[1,2,2,3,3,3,2,1],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Caminando / Bicicleta","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[2,1,1,2,1,1,4,11],"answers":["36 a 50 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Micro / Bus","Incómodo","La falta de espacio para caminar","en la plaza","2"]},{"codes":[4,3,0,2,0,0,3,4],"answers":["Más de 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en los cruces hacia el puerto","1"]},{"codes":[1,1,3,0,4,4,6,13],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Muy cómodo","Ninguna de las anteriores","","5"]},{"codes":[2,2,3,4,2,2,1,0],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Colectivo","Ni cómodo ni incómodo","La falta de señalización u orientación","sotomayor con blanco","3"]},{"codes":[0,0,1,2,2,1,0,8],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","en blanco","2"]},{"codes":[3,1,2,1,3,2,0,2],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","El transito de vehículos","cochrane con sotomayor","3"]},{"codes":[2,1,0,3,3,3,2,10],"answers":["36 a 50 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Cómodo","La cantidad de personas en las veredas","veredas perimetrales","4"]},{"codes":[2,1,3,1,2,2,1,13],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","La falta de señalización u orientación","","3"]},{"codes":[1,2,1,2,1,1,1,13],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Esperando a alguien o esperando transporte","Micro / Bus","Incómodo","La falta de señalización u orientación","","2"]},{"codes":[3,1,0,0,2,1,1,13],"answers":["51 a 65 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Ni cómodo ni incómodo","La falta de señalización u orientación","","2"]},{"codes":[0,0,1,2,3,2,4,13],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Micro / Bus","Cómodo","La falta de espacio para caminar","","3"]},{"codes":[2,2,2,1,1,1,3,13],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Automóvil particular","Incómodo","La dificultad para cruzar las calles","","2"]},{"codes":[1,1,3,0,3,3,0,13],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","El transito de vehículos","","4"]},{"codes":[0,0,1,0,1,0,1,13],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Incómodo","La falta de señalización u orientación","","1"]},{"codes":[2,2,3,4,3,3,0,13],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Colectivo","Cómodo","El transito de vehículos","","4"]},{"codes":[3,3,1,3,0,0,3,11],"answers":["51 a 65 años","Jubilado / Pensionado","Esperando a alguien o esperando transporte","Caminando / Bicicleta","Muy Incómodo","La dificultad para cruzar las calles","en toda la plaza","1"]},{"codes":[1,1,0,2,2,2,0,8],"answers":["26 a 35 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","en blanco","3"]},{"codes":[2,2,3,0,3,3,6,13],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","Ninguna de las anteriores","en ningún lado, cuenta con hartos semáforos","4"]},{"codes":[2,1,1,4,1,1,5,12],"answers":["36 a 50 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Colectivo","Incómodo","la delincuencia","en las esquinas, calles más cerradas","2"]},{"codes":[0,0,0,3,2,1,0,12],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Caminando / Bicicleta","Ni cómodo ni incómodo","El transito de vehículos","en sotomayor","2"]},{"codes":[3,1,2,0,3,1,0,0],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Metro (Estación Puerto)","Cómodo","El transito de vehículos","blanco con sotomayor","2"]},{"codes":[1,1,3,0,3,2,0,0],"answers":["26 a 35 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Metro (Estación Puerto)","Cómodo","El transito de vehículos","blanco con sotomayor","3"]},{"codes":[0,0,0,2,2,2,2,1],"answers":["18 a 25 años","Estudiante","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Ni cómodo ni incómodo","La cantidad de personas en las veredas","prat con sotomayor","3"]},{"codes":[2,2,2,3,4,4,6,7],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","sector monumento","5"]},{"codes":[3,1,1,1,1,1,0,0],"answers":["51 a 65 años","Trabajador dependiente","Esperando a alguien o esperando transporte","Automóvil particular","Incómodo","El transito de vehículos","sotomayor con blanco","2"]},{"codes":[4,3,0,2,0,0,3,4],"answers":["Más de 65 años","Jubilado / Pensionado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Muy Incómodo","La dificultad para cruzar las calles","en los cruces hacia el puerto","1"]},{"codes":[1,1,0,0,3,3,4,10],"answers":["26 a 35 años","Trabajador dependiente","Solo estoy de paso / Tránsito hacia otro lugar","Metro (Estación Puerto)","Cómodo","La falta de espacio para caminar","veredas perimetrales","4"]},{"codes":[2,2,4,4,1,1,4,2],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Comercio (Comprando o vendiendo)","Colectivo","Incómodo","La falta de espacio para caminar","cochrane con sotomayor","2"]},{"codes":[0,0,2,3,4,4,6,6],"answers":["18 a 25 años","Estudiante","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","centro de la plaza","5"]},{"codes":[2,1,3,1,2,2,1,6],"answers":["36 a 50 años","Trabajador dependiente","Trabajo / Trámites bancarios o públicos","Automóvil particular","Ni cómodo ni incómodo","La falta de señalización u orientación","al medio de la plaza","3"]},{"codes":[3,3,1,2,2,2,0,8],"answers":["51 a 65 años","Jubilado / Pensionado","Esperando a alguien o esperando transporte","Micro / Bus","Ni cómodo ni incómodo","El transito de vehículos","en blanco","3"]},{"codes":[1,5,0,2,1,1,3,5],"answers":["26 a 35 años","Desempleado","Solo estoy de paso / Tránsito hacia otro lugar","Micro / Bus","Incómodo","La dificultad para cruzar las calles","cruce con errazuriz","2"]},{"codes":[0,0,1,0,3,3,1,3],"answers":["18 a 25 años","Estudiante","Esperando a alguien o esperando transporte","Metro (Estación Puerto)","Cómodo","La falta de señalización u orientación","cruce estación puerto","4"]},{"codes":[2,2,3,4,3,2,0,0],"answers":["36 a 50 años","Trabajador independiente / Emprendedor","Trabajo / Trámites bancarios o públicos","Colectivo","Cómodo","El transito de vehículos","sotomayor con blanco","3"]},{"codes":[3,1,2,1,3,3,2,1],"answers":["51 a 65 años","Trabajador dependiente","Turismo / Paseo","Automóvil particular","Cómodo","La cantidad de personas en las veredas","prat con sotomayor","4"]},{"codes":[1,2,2,3,4,4,6,11],"answers":["26 a 35 años","Trabajador independiente / Emprendedor","Turismo / Paseo","Caminando / Bicicleta","Muy cómodo","Ninguna de las anteriores","toda la plaza","5"]}];
+  let field = 4;
+  let paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let selected = -1;
+  let frame = 0;
+  let previous = 0;
+  const trackTimes = [27,22,17,13,10];
+
+  function make(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function choose(id) {
+    if (!paused) return;
+    selected = id;
+    traces.forEach((trace,index)=>trace.control.setAttribute('aria-pressed',String(index===id)));
+    find('detail-title').textContent = 'Respuesta ' + (id+1) + ' de ' + responses.length;
+    find('answers').replaceChildren(...questions.map((question,index)=>{
+      const item=make('div');
+      const raw=responses[id].answers[index];
+      const answer = !raw || raw.toLowerCase()==='null' ? 'Sin indicación' : index===7 ? raw+' de 5' : raw;
+      item.append(make('dt','',question),make('dd','',answer));
+      return item;
+    }));
+    detail.dataset.level = responses[id].codes[4];
+    detail.hidden = false;
+    graph.inert = true;
+    root.setAttribute('data-detail-open','');
+    back.focus();
+  }
+
+  function closeDetail() {
+    if (detail.hidden) return;
+    const control = traces[selected].control;
+    detail.hidden = true;
+    graph.inert = false;
+    root.removeAttribute('data-detail-open');
+    control.setAttribute('aria-pressed','false');
+    selected = -1;
+    control.focus();
+  }
+
+  const traces = responses.map((response,id)=>{
+    const slot = make('div','trace-slot');
+    const control = make('button','trace');
+    const walker = make('span','walker');
+    const body = make('span','body');
+    for (const part of ['leg limb far','arm limb far','torso','head','leg limb','arm limb']) {
+      body.append(make('span',part));
+    }
+    walker.append(body);
+    walker.setAttribute('aria-hidden','true');
+    control.append(walker);
+    slot.style.setProperty('--phase',(-.13*(id*23%29))+'s');
+    slot.dataset.level = response.codes[4];
+    control.type = 'button';
+    control.setAttribute('aria-label','Persona, respuesta ' + (id+1) + ', ' + comfort[response.codes[4]]);
+    control.setAttribute('aria-pressed','false');
+    control.addEventListener('click',()=>choose(id));
+    slot.append(control);
+    const angle = id*2.399963 + .25;
+    return {slot,control,x:((id*37%97)+.5)/97,y:((id*53%101)+.5)/101,
+      dx:Math.cos(angle),dy:Math.sin(angle),level:response.codes[4]};
+  });
+
+  function placeFree(elapsed) {
+    const width = stage.clientWidth;
+    const height = stage.clientHeight;
+    if (!width || !height) return;
+    const travel = Math.max(1,width-24);
+    const vertical = Math.max(1,height-36);
+    for (const trace of traces) {
+      const distance = elapsed * travel / trackTimes[trace.level];
+      trace.x += trace.dx * distance / travel;
+      trace.y += trace.dy * distance / vertical;
+      if (trace.x < 0 || trace.x > 1) {
+        trace.x = trace.x < 0 ? -trace.x : 2-trace.x;
+        trace.dx *= -1;
+      }
+      if (trace.y < 0 || trace.y > 1) {
+        trace.y = trace.y < 0 ? -trace.y : 2-trace.y;
+        trace.dy *= -1;
+      }
+      trace.slot.style.setProperty('--free-x',(2+trace.x*travel)+'px');
+      trace.slot.style.setProperty('--free-y',(18+trace.y*vertical)+'px');
+      trace.slot.style.setProperty('--direction',trace.dx<0?-1:1);
+    }
+  }
+
+  function advance(now) {
+    const elapsed = previous ? Math.min(.05,(now-previous)/1000) : 0;
+    previous = now;
+    placeFree(elapsed);
+    frame = requestAnimationFrame(advance);
+  }
+
+  function syncFree() {
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
+    previous = 0;
+    if (field === 4) {
+      placeFree(0);
+      if (!paused) frame = requestAnimationFrame(advance);
+    }
+  }
+
+  const freeObserver = new ResizeObserver(() => {
+    if (field===4) placeFree(0);
+  });
+  freeObserver.observe(stage);
+
+  find('comfort').replaceChildren(...comfort.map((name,index)=>{
+    const item=make('div','text-small',name);
+    const swatch=make('span','swatch');
+    item.dataset.level=index;
+    swatch.setAttribute('aria-hidden','true');
+    item.append(swatch);
+    return item;
+  }));
+
+  function regroup() {
+    const labels=field===4?comfort:categories[field];
+    root.style.setProperty('--groups',labels.length);
+    groupRow.hidden=field===4;
+    layout.toggleAttribute('data-grouped',field!==4);
+    dividers.replaceChildren(...labels.map(()=>make('span')));
+    groupRow.replaceChildren(...labels.map((label,index)=>{
+      const group=responses.map((response,id)=>({response,id}))
+        .filter(item=>item.response.codes[field]===index)
+        .sort((a,b)=>a.response.codes[4]-b.response.codes[4] || a.id-b.id);
+      group.forEach(({id},position)=>{
+        const slot=traces[id].slot;
+        const step=100/labels.length;
+        const lanes = Math.min(3, group.length);
+        const lane = position % lanes;
+        const y = (index+.5+(lane-(lanes-1)/2)*.23)*step;
+        const level = responses[id].codes[4];
+        const duration = trackTimes[level];
+        const phase = (position+.42)/group.length;
+        slot.style.setProperty('--y',y+'%');
+        slot.style.setProperty('--crossing',duration+'s');
+        slot.style.setProperty('--start',(-duration*phase)+'s');
+        slot.style.setProperty('--rest-x',(phase*93)+'%');
+      });
+      const title=make('div','text-small',label);
+      title.append(make('span','text-small',String(group.length)));
+      return title;
+    }));
+    buttons.forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.field)===field)));
+    syncFree();
+  }
+
+  function updateMotion() {
+    root.toggleAttribute('data-paused',paused);
+    pause.textContent=paused?'Reanudar movimiento':'Pausar movimiento';
+    pause.setAttribute('aria-pressed',String(paused));
+    for(const trace of traces) trace.control.disabled=!paused;
+    if(!paused) {
+      if(selected>=0) traces[selected].control.setAttribute('aria-pressed','false');
+      selected=-1;
+      detail.hidden=true;
+    }
+    syncFree();
+    find('status').textContent=paused?'Movimiento pausado. Selecciona una figura para ver sus respuestas.':'96 personas · Pulsa una categoría para ordenar la caminata. Pausa para abrir una respuesta.';
+  }
+
+  buttons.forEach(button=>button.addEventListener('click',()=>{
+    const next=Number(button.dataset.field);
+    field=field===next?4:next;
+    regroup();
+  }));
+  pause.addEventListener('click',()=>{
+    paused=!paused;
+    if(!paused) root.setAttribute('data-motion-override','');
+    updateMotion();
+  });
+  back.addEventListener('click',closeDetail);
+  detail.addEventListener('keydown',event=>{
+    if (event.key === 'Escape') closeDetail();
+  });
+  regroup();
+  stage.append(...traces.map(trace=>trace.slot));
+  updateMotion();
+})();
+</script>
+
+</template>
+<script>
+(() => {
+  const mount = document.getElementById('visualizacion');
+  const links = [...document.querySelectorAll('[data-view]')];
+  const frames = new Map();
+  function render() {
+    const view = location.hash === '#libre' ? 'libre' : 'pistas';
+    for (const link of links) {
+      if (link.dataset.view === view) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    }
+    for (const [key, wrapper] of frames) wrapper.hidden = key !== view;
+    if (frames.has(view)) return;
+    const wrapper = document.createElement('div');
+    wrapper.append(document.getElementById(view).content.cloneNode(true));
+    const fragmentScript = wrapper.querySelector('script');
+    const script = document.createElement('script');
+    script.textContent = fragmentScript.textContent;
+    fragmentScript.remove();
+    mount.append(wrapper);
+    frames.set(view, wrapper);
+    wrapper.append(script);
+  }
+  window.addEventListener('hashchange', render);
+  render();
+})();
+</script>
+</body></html>
